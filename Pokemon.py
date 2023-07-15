@@ -182,7 +182,7 @@ class Pokemon_Battle:
 
 
 
-blastoise = Pokemon('blastoise',  50, [Pokemon_Move('crunch'), Pokemon_Move('tackle'), Pokemon_Move('water-gun'), Pokemon_Move('hydro-pump')])
-Charizard = Pokemon('charizard', 50, [Pokemon_Move('fly'), Pokemon_Move('flamethrower'), Pokemon_Move('wing-attack'), Pokemon_Move('bite')])
-battle = Pokemon_Battle(Charizard, blastoise)
+Opponent = Pokemon('blastoise',  50, [Pokemon_Move('crunch'), Pokemon_Move('tackle'), Pokemon_Move('water-gun'), Pokemon_Move('hydro-pump')])
+My_Pokemon = Pokemon('sceptile', 50, [Pokemon_Move('leaf-blade'), Pokemon_Move('slash'), Pokemon_Move('dragon-claw'), Pokemon_Move('bite')])
+battle = Pokemon_Battle(My_Pokemon, Opponent)
 
