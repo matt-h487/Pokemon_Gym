@@ -78,6 +78,9 @@ class Pokemon_Move:
         self.damage_class = move_data['damage_class']['name']
         self.type_effectiveness = self.get_type_effectiveness(self.type)
 
+        if self.accuracy == None:
+            self.accuracy = 100
+
         if self.damage_class == 'status':
             status_data = move_data['stat_changes']
             self.status_stat = status_data[0]['stat']['name']
@@ -116,7 +119,7 @@ class Pokemon_Move:
                 for relation_name, relation_types in weakness_data.items():
                     for relation_type in relation_types:
                         type_effectiveness[relation_name].append(relation_type['name'])
-                print(type_effectiveness)
+
                 return type_effectiveness
             else:
                 print("Error getting Type Information")
@@ -131,80 +134,55 @@ class Pokemon_Battle:
         self.Pokemon1 = Pokemon1
         self.Pokemon2 = Pokemon2
         self.turn = False
-        self.battle()
+        #self.battle()
 
-    def battle(self):
-        while self.Pokemon1.hp > 0 and self.Pokemon2.hp > 0:
-            print(f'{self.Pokemon1.name.capitalize()} has {self.Pokemon1.hp} hp.')
-            print(f'{self.Pokemon2.name.capitalize()} has {self.Pokemon2.hp} hp.')
 
-            if self.Pokemon1.speed > self.Pokemon2.speed:
-                self.perform_turn(self.Pokemon1, self.Pokemon2)
-                if self.Pokemon2.hp > 0:  # Check if the battle has already ended
-                    self.perform_turn(self.Pokemon2, self.Pokemon1)
-            elif self.Pokemon2.speed > self.Pokemon1.speed:
-                self.perform_turn(self.Pokemon2, self.Pokemon1)
-                if self.Pokemon1.hp > 0:
-                    self.perform_turn(self.Pokemon1, self.Pokemon2)
-            else:
-                first_pokemon = random.choice([self.Pokemon1, self.Pokemon2])
-                second_pokemon = self.Pokemon2 if first_pokemon == self.Pokemon1 else self.Pokemon1
-                self.perform_turn(first_pokemon, second_pokemon)
-                if second_pokemon.hp > 0:  # Check if the battle has already ended
-                    self.perform_turn(second_pokemon, first_pokemon)
-
-        if self.Pokemon1.hp <= 0:
-            print(f'{self.Pokemon1.name.capitalize()} has fainted.')
-        if self.Pokemon2.hp <= 0:
-            print(f'{self.Pokemon2.name.capitalize()} has fainted.')
-
-    def perform_turn(self, attacking_Pokemon, defending_Pokemon):
+    def perform_turn(self, attacking_Pokemon, defending_Pokemon, action):
         damage = 0
         chance = random.randint(1, 100)
 
 
         for move in attacking_Pokemon.moves:
             move.display()
-        user_choice = input('Choose a move: ').lower()
-        for move in attacking_Pokemon.moves:
-            if user_choice == move.name:
-                if chance <= move.accuracy:
-                    modifier = self.get_effectiveness(move, defending_Pokemon)
-                    if move.damage_class == 'physical':
-                        damage = (((2 * attacking_Pokemon.level / 5 + 2) * move.power * (attacking_Pokemon.attack / defending_Pokemon.defense) / 50) + 2) * modifier
-                    elif move.damage_class == 'special':
-                        damage = (((2 * attacking_Pokemon.level / 5 + 2) * move.power * (attacking_Pokemon.spattack / defending_Pokemon.spdefense) / 50) + 2) * modifier
-                    elif move.damage_class == 'status':
-                        if move.status_stat == 'speed':
-                            if move.status > 1:
-                                attacking_Pokemon.speed *= move.status
-                            else:
-                                defending_Pokemon.speed *= move.status
-                        elif move.status_stat == 'defense':
-                            if move.status > 1:
-                                attacking_Pokemon.defense *= move.status
-                            else:
-                                defending_Pokemon.defense *= move.status
-                        elif move.status_stat == 'attack':
-                            if move.status > 1:
-                                attacking_Pokemon.attack *= move.status
-                            else:
-                                defending_Pokemon.attack *= move.status
-                        elif move.status_stat == 'special-attack':
-                            if move.status > 1:
-                                attacking_Pokemon.spattack *= move.status
-                            else:
-                                defending_Pokemon.spattack *= move.status
-                        elif move.status_stat == 'special-defense':
-                            if move.status > 1:
-                                attacking_Pokemon.spdefense *= move.status
-                            else:
-                                defending_Pokemon.spdefense *= move.status
+        user_choice = attacking_Pokemon.moves[action]
+        if user_choice.lower() == move.name:
+            if chance <= move.accuracy:
+                modifier = self.get_effectiveness(move, defending_Pokemon)
+                if move.damage_class == 'physical':
+                    damage = (((2 * attacking_Pokemon.level / 5 + 2) * move.power * (attacking_Pokemon.attack / defending_Pokemon.defense) / 50) + 2) * modifier
+                elif move.damage_class == 'special':
+                    damage = (((2 * attacking_Pokemon.level / 5 + 2) * move.power * (attacking_Pokemon.spattack / defending_Pokemon.spdefense) / 50) + 2) * modifier
+                elif move.damage_class == 'status':
+                    if move.status_stat == 'speed':
+                        if move.status > 1:
+                            attacking_Pokemon.speed *= move.status
+                        else:
+                            defending_Pokemon.speed *= move.status
+                    elif move.status_stat == 'defense':
+                        if move.status > 1:
+                            attacking_Pokemon.defense *= move.status
+                        else:
+                            defending_Pokemon.defense *= move.status
+                    elif move.status_stat == 'attack':
+                        if move.status > 1:
+                            attacking_Pokemon.attack *= move.status
+                        else:
+                            defending_Pokemon.attack *= move.status
+                    elif move.status_stat == 'special-attack':
+                        if move.status > 1:
+                            attacking_Pokemon.spattack *= move.status
+                        else:
+                            defending_Pokemon.spattack *= move.status
+                    elif move.status_stat == 'special-defense':
+                        if move.status > 1:
+                            attacking_Pokemon.spdefense *= move.status
+                        else:
+                            defending_Pokemon.spdefense *= move.status
                     if move.type in attacking_Pokemon.types:
                         damage = damage * 1.5
                     defending_Pokemon.hp -= damage
-                else:
-                    print(f'{move.name.capitalize()} missed!')
+            else:
+                print(f'{move.name.capitalize()} missed!')
 
 
 
@@ -215,9 +193,6 @@ class Pokemon_Battle:
         damage_modifier = 1.0
         dtypes = defending_pokemon.types
         type_effectiveness = move.type_effectiveness
-
-        print("Defending Pokemon Types:", dtypes)
-        print("Type Effectiveness Data:", type_effectiveness)
 
         for type in dtypes:
             for damage_relation, types in type_effectiveness.items():
@@ -231,11 +206,9 @@ class Pokemon_Battle:
                     elif damage_relation == 'no_damage_to':
                         print('No damage done')
                         damage_modifier *= 0.0
+        print(damage_modifier)
         return damage_modifier
 
 
 
-Opponent = Pokemon('haunter', [Pokemon_Move('crunch'), Pokemon_Move('shadow-ball'), Pokemon_Move('scary-face'), Pokemon_Move('shadow-claw')])
-My_Pokemon = Pokemon('snorlax', [Pokemon_Move('tackle'), Pokemon_Move('leer'), Pokemon_Move('swords-dance'), Pokemon_Move('bite')])
-battle = Pokemon_Battle(My_Pokemon, Opponent)
-#move = Pokemon_Move('ember')
+
