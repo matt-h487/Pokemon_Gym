@@ -15,6 +15,7 @@ class Pokemon:
         self.evasion = 0
         self.types = []
         self.moves = moves
+        self.previous_moves = []
         self.ability = ''
         url = f"https://pokeapi.co/api/v2/pokemon/{self.name}"
         response = requests.get(url)
@@ -51,6 +52,11 @@ class Pokemon:
                 self.spdefense = math.floor(0.01 * (2 * stat_value) * self.level) + 5
             elif stat_name == 'hp':
                 self.hp = math.floor(0.01 * (2 * stat_value) * self.level) + self.level + 10
+
+    def use_move(self, move_name):
+        if len(self.previous_moves) >= self.num_moves:
+            self.previous_moves.pop(0)  # Remove the oldest move if the list is full
+        self.previous_moves.append(move_name)
 
 class Pokemon_Move:
     def __init__(self, name):
@@ -145,45 +151,46 @@ class Pokemon_Battle:
         for move in attacking_Pokemon.moves:
             move.display()
         user_choice = attacking_Pokemon.moves[action]
-        if user_choice.lower() == move.name:
-            if chance <= move.accuracy:
-                modifier = self.get_effectiveness(move, defending_Pokemon)
-                if move.damage_class == 'physical':
-                    damage = (((2 * attacking_Pokemon.level / 5 + 2) * move.power * (attacking_Pokemon.attack / defending_Pokemon.defense) / 50) + 2) * modifier
-                elif move.damage_class == 'special':
-                    damage = (((2 * attacking_Pokemon.level / 5 + 2) * move.power * (attacking_Pokemon.spattack / defending_Pokemon.spdefense) / 50) + 2) * modifier
-                elif move.damage_class == 'status':
-                    if move.status_stat == 'speed':
-                        if move.status > 1:
-                            attacking_Pokemon.speed *= move.status
-                        else:
-                            defending_Pokemon.speed *= move.status
-                    elif move.status_stat == 'defense':
-                        if move.status > 1:
-                            attacking_Pokemon.defense *= move.status
-                        else:
-                            defending_Pokemon.defense *= move.status
-                    elif move.status_stat == 'attack':
-                        if move.status > 1:
-                            attacking_Pokemon.attack *= move.status
-                        else:
-                            defending_Pokemon.attack *= move.status
-                    elif move.status_stat == 'special-attack':
-                        if move.status > 1:
-                            attacking_Pokemon.spattack *= move.status
-                        else:
-                            defending_Pokemon.spattack *= move.status
-                    elif move.status_stat == 'special-defense':
-                        if move.status > 1:
-                            attacking_Pokemon.spdefense *= move.status
-                        else:
-                            defending_Pokemon.spdefense *= move.status
-                    if move.type in attacking_Pokemon.types:
-                        damage = damage * 1.5
-                    defending_Pokemon.hp -= damage
-            else:
-                print(f'{move.name.capitalize()} missed!')
-
+        for move in attacking_Pokemon.moves:
+            if user_choice.lower() == move.name:
+                if chance <= move.accuracy:
+                    modifier = self.get_effectiveness(move, defending_Pokemon)
+                    if move.damage_class == 'physical':
+                        damage = (((2 * attacking_Pokemon.level / 5 + 2) * move.power * (attacking_Pokemon.attack / defending_Pokemon.defense) / 50) + 2) * modifier
+                    elif move.damage_class == 'special':
+                        damage = (((2 * attacking_Pokemon.level / 5 + 2) * move.power * (attacking_Pokemon.spattack / defending_Pokemon.spdefense) / 50) + 2) * modifier
+                    elif move.damage_class == 'status':
+                        if move.status_stat == 'speed':
+                            if move.status > 1:
+                                attacking_Pokemon.speed *= move.status
+                            else:
+                                defending_Pokemon.speed *= move.status
+                        elif move.status_stat == 'defense':
+                            if move.status > 1:
+                                attacking_Pokemon.defense *= move.status
+                            else:
+                                defending_Pokemon.defense *= move.status
+                        elif move.status_stat == 'attack':
+                            if move.status > 1:
+                                attacking_Pokemon.attack *= move.status
+                            else:
+                                defending_Pokemon.attack *= move.status
+                        elif move.status_stat == 'special-attack':
+                            if move.status > 1:
+                                attacking_Pokemon.spattack *= move.status
+                            else:
+                                defending_Pokemon.spattack *= move.status
+                        elif move.status_stat == 'special-defense':
+                            if move.status > 1:
+                                attacking_Pokemon.spdefense *= move.status
+                            else:
+                                defending_Pokemon.spdefense *= move.status
+                        if move.type in attacking_Pokemon.types:
+                            damage = damage * 1.5
+                        defending_Pokemon.hp -= damage
+                else:
+                    print(f'{move.name.capitalize()} missed!')
+                attacking_Pokemon.use_move(move.name)
 
 
 
@@ -208,6 +215,7 @@ class Pokemon_Battle:
                         damage_modifier *= 0.0
         print(damage_modifier)
         return damage_modifier
+
 
 
 
