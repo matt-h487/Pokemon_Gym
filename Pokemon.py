@@ -58,6 +58,7 @@ class Pokemon:
             self.previous_moves.pop(0)  # Remove the oldest move if the list is full
         self.previous_moves.append(move_name)
         self.damage = damage
+        self.hp = self.hp - self.damage
 
 class Pokemon_Move:
     def __init__(self, name):
