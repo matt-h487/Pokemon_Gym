@@ -4,6 +4,7 @@ import math
 
 class Pokemon:
     def __init__(self, name, moves):
+        #Initialize all Pokemon variables
         self.name = name.lower()
         self.level = 50
         self.hp =0
@@ -20,6 +21,7 @@ class Pokemon:
         url = f"https://pokeapi.co/api/v2/pokemon/{self.name}"
         response = requests.get(url)
         if response.status_code == 200:
+            #Check if response is valid, then gather data
             self.pokemon_data = response.json()
             self.set_type()
             self.set_stats()
@@ -58,7 +60,7 @@ class Pokemon:
             self.previous_moves.pop(0)  # Remove the oldest move if the list is full
         self.previous_moves.append(move_name)
         self.damage = damage
-        self.hp = self.hp - self.damage
+        
 
 class Pokemon_Move:
     def __init__(self, name):
@@ -90,6 +92,7 @@ class Pokemon_Move:
             self.accuracy = 100
 
         if self.damage_class == 'status':
+
             status_data = move_data['stat_changes']
             self.status_stat = status_data[0]['stat']['name']
             stage_modifier = status_data[0]['change']
@@ -102,6 +105,9 @@ class Pokemon_Move:
                 self.status = 0
             else:
                 self.status = 1 + (stage_modifier * 0.5)
+                
+        if self.power == None:
+            self.power = 0
 
 
     def get_type_effectiveness(self, type):
@@ -155,6 +161,8 @@ class Pokemon_Battle:
         move = attacking_Pokemon.moves[action]
         
         if chance <= move.accuracy:
+            #If move lands, compute damage/effect
+            #Status moves such as sleep, paralysis, etc. not added yet
             modifier = self.get_effectiveness(move, defending_Pokemon)
             
             if move.damage_class == 'physical':
@@ -187,10 +195,11 @@ class Pokemon_Battle:
                         attacking_Pokemon.spdefense *= move.status
                     else:
                         defending_Pokemon.spdefense *= move.status
+                damage = 0
 
                 if move.type in attacking_Pokemon.types:
                     damage = damage * 1.5
-
+            print(f'{attacking_Pokemon.name.capitalize()} used {move.name.capitalize()}!')
             defending_Pokemon.hp -= damage
         else:
             print(f'{move.name.capitalize()} missed!')

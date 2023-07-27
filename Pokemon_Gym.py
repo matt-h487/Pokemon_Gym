@@ -31,22 +31,22 @@ class BattleEnv(gym.Env):
         self.done = False
 
         # Define the observation space for continuous attributes (Pokemon stats and move damage dealt)
-        self.num_stats = 6  # Number of Pokemon stats (HP, Attack, Defense, SpAttack, SpDefense, Speed)
-        self.num_moves = 4  # Number of moves each Pokemon can have
+        self.num_stats = 6
+        self.num_moves = 4
         self.observation_stats_low = np.zeros(self.num_stats)
         self.observation_stats_high = np.array([255.0] * self.num_stats)
 
         self.observation_damage_low = np.zeros(self.num_moves)
         self.observation_damage_high = np.array([100.0] * self.num_moves)
 
-        # Define the observation space for discrete attributes (types, move types, and previously used moves)
-        self.num_types = 18  # Number of Pokemon types
-        self.num_damage_types = 3  # Number of damage types (special, physical, status)
+        # Define the observation space for discrete attributes (types, move types,)
+        self.num_types = 18
+        self.num_damage_types = 3
         self.pokemon_types = ['normal', 'fighting', 'flying', 'poison', 'ground', 'rock', 'bug', 'ghost', 'steel', 'fire', 'water', 'grass', 'electric', 'psychic', 'ice', 'dragon', 'dark', 'fairy']
         self.type_to_index = {type_name: idx for idx, type_name in enumerate(self.pokemon_types)}
         self.damage_types = ['physical', 'special', 'status']
 
-        # Combine the continuous and discrete attributes
+
         # Combine the continuous and discrete attributes
         self.observation_space = gym.spaces.Dict({
             'player_stats': gym.spaces.Box(low=self.observation_stats_low, high=self.observation_stats_high, dtype=np.float32),
@@ -59,76 +59,80 @@ class BattleEnv(gym.Env):
         })
 
 
-        
+
     def step(self, action):
+        #Check speed for who goes first, then perform turn if both Pokemon are up
         opponent_action = Discrete(4).sample()
-
-        if self.Pokemon1.speed > self.Pokemon2.speed:
-            self.battle.perform_turn(self.Pokemon1, self.Pokemon2, action)
-            if self.Pokemon2.hp > 0:  # Check if the battle has already ended
-                self.battle.perform_turn(self.Pokemon2, self.Pokemon1, opponent_action)
-        elif self.Pokemon2.speed > self.Pokemon1.speed:
-            self.battle.perform_turn(self.Pokemon2, self.Pokemon1, opponent_action)
-            if self.Pokemon1.hp > 0:
+        if self.Pokemon1.hp > 0 and self.Pokemon2.hp > 0:
+            if self.Pokemon1.speed > self.Pokemon2.speed:
                 self.battle.perform_turn(self.Pokemon1, self.Pokemon2, action)
+                if self.Pokemon2.hp > 0:
+                    self.battle.perform_turn(self.Pokemon2, self.Pokemon1, opponent_action)
+                else:
+                    print(f'{self.Pokemon2.name.capitalize()} has fainted.')
+                    self.done = True
+            elif self.Pokemon2.speed > self.Pokemon1.speed:
+                self.battle.perform_turn(self.Pokemon2, self.Pokemon1, opponent_action)
+                if self.Pokemon1.hp > 0:
+                    self.battle.perform_turn(self.Pokemon1, self.Pokemon2, action)
+                else:
+                    print(f'{self.Pokemon1.name.capitalize()} has fainted.')
+                    self.done = True
+            else:
+                #if speed is equal, who goes first is random
+                first_pokemon = random.choice([self.Pokemon1, self.Pokemon2])
+                second_pokemon = self.Pokemon2 if first_pokemon == self.Pokemon1 else self.Pokemon1
+                self.battle.perform_turn(first_pokemon, second_pokemon, action if first_pokemon == self.Pokemon1 else opponent_action)
+                if second_pokemon.hp > 0:
+                    self.battle.perform_turn(second_pokemon, first_pokemon, action if second_pokemon == self.Pokemon1 else opponent_action)
+                else:
+                    print(f'{second_pokemon.name.capitalize()} has fainted.')
+                    self.done = True
         else:
-            first_pokemon = random.choice([self.Pokemon1, self.Pokemon2])
-            second_pokemon = self.Pokemon2 if first_pokemon == self.Pokemon1 else self.Pokemon1
-            self.battle.perform_turn(first_pokemon, second_pokemon, action if first_pokemon == self.Pokemon1 else opponent_action)
-            if second_pokemon.hp > 0:  # Check if the battle has already ended
-                self.battle.perform_turn(second_pokemon, first_pokemon, action if second_pokemon == self.Pokemon1 else opponent_action)
-
-        if self.Pokemon1.hp <= 0:
-            print(f'{self.Pokemon1.name.capitalize()} has fainted.')
-            self.done = True
-        if self.Pokemon2.hp <= 0:
-            print(f'{self.Pokemon2.name.capitalize()} has fainted.')
             self.done = True
 
         observation = self.get_observation()
         reward = self.get_reward()
         info = {}
 
-        return observation, reward, self.done, info
+        return observation, reward, self.done, False, info
 
-            
+
     def render(self):
-        print(f'{self.Pokemon1.name.capitalize()} has {self.Pokemon1.hp} hp.')
-        print(f'{self.Pokemon2.name.capitalize()} has {self.Pokemon2.hp} hp.')
-    
+        if not self.done:
+            print(f'{self.Pokemon1.name.capitalize()} has {self.Pokemon1.hp} hp.')
+            print(f'{self.Pokemon2.name.capitalize()} has {self.Pokemon2.hp} hp.')
+
     def reset(self, seed=None):
         self.Pokemon1 = self.get_random_pokemon()  # Get a random player Pokemon
         self.Pokemon2 = self.get_random_pokemon()  # Get a random opponent Pokemon
-        self.current_turn_number = 1
-        self.any_status_condition_active = False
-        self.previous_action = None
-        self.previous_opponent_action = None
         self.battle = Pokemon_Battle(self.Pokemon1, self.Pokemon2)
+        self.done = False
 
         # Get the initial observation
         observation = self.get_observation()
-        
+
         info = {}
 
         return observation, info
-    
+
     def get_reward(self):
-        
+
         if self.done:
             if self.Pokemon1.hp <= 0:
                 # Player Pokemon has fainted, so the agent lost the battle
-                reward = -100  # Penalty for losing the battle
+                reward = -50  # Penalty for losing the battle
             elif self.Pokemon2.hp <= 0:
                 # Opponent Pokemon has fainted, so the agent won the battle
-                reward = 100  # Reward for winning the battle
+                reward = 50  # Reward for winning the battle
             else:
                 # The battle ended in a draw or some other unknown condition
                 reward = 0
         else:
             reward = self.Pokemon1.damage
-        
+
         return reward
-    
+
     def get_observation(self):
         # Observation for player's Pokemon
         player_observation_stats = np.array([self.Pokemon1.hp, self.Pokemon1.attack, self.Pokemon1.defense,
@@ -186,14 +190,14 @@ class BattleEnv(gym.Env):
     def get_random_pokemon(self):
         #dictionary of pokemon
         pre_built_pokemon = {
-        "bulbasaur": ["tackle", "vine-whip", "leer", "razor-leaf"],
-        "charmander": ["scratch", "ember", "metal-claw", "flamethrower"],
-        "squirtle": ["tackle", "water-gun", "bubble", "hydro-pump"],
-        "pikachu": ["growl", "thunder-shock", "electro-ball", "thunderbolt"],
-        "jigglypuff": ["pound", "leer", "double-slap", "hyper-voice"],
-        "meowth": ["scratch", "crunch", "bite", "growl"],
+        "venusaur": ["vine-whip", "razor-leaf", "sludge-bomb", "leer"],
+        "charizard": ["flamethrower", "wing-attack", "dragon-claw", "growl"],
+        "blastoise": ["water-gun", "hydro-pump", "ice-beam", "bite"],
+        "raichu": ["thunderbolt", "volt-switch", "tackle", "growl"],
+        "wigglytuff": ["dazzling-gleam", "play-rough", "leer", "tackle"],
+        "persian": ["slash", "night-slash", "swift", "leer"],
     }
-        
+
         PokeName = random.choice(list(pre_built_pokemon.keys()))
         moves = pre_built_pokemon[PokeName]
         list_moves = []
@@ -202,6 +206,7 @@ class BattleEnv(gym.Env):
         pokemon = Pokemon(PokeName, list_moves)
 
         return pokemon
+
 
 
 # In[19]:
